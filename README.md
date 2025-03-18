@@ -10,3 +10,28 @@ IRR-RPSL-Dispatcher supports various IRR instances, ranging from local private I
 Additionally, the tool generates JSON files that document the processed RPSL objects. These files are stored in an `objects/` directory, facilitating auditing and consistency management by ensuring that all submitted objects adhere to uniform formatting rules.
 
 The tool can be enhanced in several ways to integrate more effectively with other tools. This would facilitate end-to-end network automation and play a vital role in managing routing policies, where security and availability are critical. Please feel free to share any ideas or suggestions you may have.
+
+```
+python3 irr_rpsl_dispatcher.py --help
+ 2 err | chatnoc-venv 3.12.9 py | at 23:31:59 
+usage: irr_rpsl_dispatcher.py [-h] [-s SERVER] [-p PORT] [--db-type {RADB,ALTDB}] [--instance {irrd,altdb,radb,tc}] [--https] [-o OVERRIDE] file
+
+Submit an RPSL object to a chosen IRR server using the HTTP/HTTPS API.
+
+positional arguments:
+  file                  File containing the RPSL object to submit (full path; can be plain text, JSON, or .txt)
+
+options:
+  -h, --help            show this help message and exit
+  -s SERVER, --server SERVER
+                        IRR server hostname (overrides the default for the selected instance)
+  -p PORT, --port PORT  IRR server port (overrides the default for the selected instance)
+  --db-type {RADB,ALTDB}
+                        Target IRR database type (default: ALTDB)
+  --instance {irrd,altdb,radb,tc}
+                        Select the target IRR instance. 'irrd' defaults to 127.0.0.1 (HTTP API on port 8080), 'altdb' to whois.altdb.net:43, 'radb' to whois.radb.net:43, and 'tc' to bgp.net.br:80 (default:
+                        altdb)
+  --https               Use HTTPS instead of HTTP for the API connection
+  -o OVERRIDE, --override OVERRIDE
+                        Override password, if required
+```
