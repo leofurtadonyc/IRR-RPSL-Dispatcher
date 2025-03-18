@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-A dispatcher tool for IRR that sends RPSL objects via the HTTP API.
+A submission tool for IRR that sends an RPSL object via the HTTP API,
+with an auditing feature that logs each successful operation.
 
 Usage:
-    python irr_rpsl_dispatcher.py [options] <file>
+    python irr_rpsl_submit.py [options] <file>
 
 Options:
     -s, --server     IRR server hostname (default depends on --instance)
@@ -23,7 +24,9 @@ import json
 import os
 import sys
 import requests
+import socket
 import string
+from datetime import datetime
 
 def sanitize_nic_handle(handle):
     """
@@ -148,22 +151,19 @@ def process_txt_file(txt_filename):
 
 def generate_route_subobjects(rpsl_text, object_type):
     """
-    For a route or route6 object, generates a list of route object texts that includes:
+    For a route or route6 object, generates a list of RPSL object texts that includes:
       - The original object.
       - Additional objects subdividing the network.
     
-    For IPv4 ("route"), subdivisions are generated from (original.prefixlen + 1) up to /24.
-    For IPv6 ("route6"), subdivisions are generated from (original.prefixlen + 1) up to /36.
-    If the original prefix is already at the maximum (or, for IPv6, if it is greater than /36),
-    an error is raised for IPv6 or no subdivisions are generated for IPv4.
+    For IPv4 ("route"): subdivisions are generated from (prefix+1) up to /24.
+    For IPv6 ("route6"): subdivisions are generated from (prefix+1) up to /36.
+    If the original IPv6 prefix is longer than /36, an error is raised.
     
     Returns a list of RPSL object texts.
     """
-    import ipaddress
-
     lines = rpsl_text.splitlines()
     new_objects = []
-    # Determine the keyword based on object_type.
+    # Determine keyword based on object type.
     keyword = "route6:" if object_type == "route6" else "route:"
     # Find the route line.
     route_line = None
@@ -187,14 +187,14 @@ def generate_route_subobjects(rpsl_text, object_type):
     except Exception as e:
         raise Exception(f"Error parsing route value '{route_val}': {e}")
 
-    # For route6, ensure that the original prefix is not longer than /36.
+    # For route6, ensure original prefix is not longer than /36.
     if object_type == "route6" and network.prefixlen > max_prefix:
         raise Exception(f"multiple_routes not allowed for {object_type} prefixes longer than /{max_prefix}.")
 
     # Always include the original object.
     new_objects.append(rpsl_text)
     
-    # If the original prefix is less than the maximum, generate subdivisions.
+    # Generate subdivisions if the original prefix is less than max_prefix.
     if network.prefixlen < max_prefix:
         for new_plen in range(network.prefixlen + 1, max_prefix + 1):
             for subnet in network.subnets(new_prefix=new_plen):
@@ -250,6 +250,46 @@ def submit_rpsl_change(api_url, objects_list, passwords, action=None):
     except requests.RequestException as e:
         return {"error": str(e), "response": response.text if response else "No response"}
 
+def write_audit_log(username, host_ip, operation, json_filename):
+    """
+    Writes a formatted audit log to a file in the "logs/" folder.
+    The log includes:
+      - Timestamp (MM-DD-YYYY HH:MM)
+      - Username
+      - Host IP address
+      - Operation performed (add, modify, delete)
+      - JSON filename corresponding to the operation
+    """
+    if not os.path.exists("logs"):
+        os.makedirs("logs")
+    timestamp = datetime.now().strftime("%m-%d-%Y %H:%M")
+    log_entry = (
+        f"Timestamp: {timestamp}\n"
+        f"Username: {username}\n"
+        f"Host IP: {host_ip}\n"
+        f"Operation: {operation}\n"
+        f"JSON File: {json_filename}\n"
+        "----------------------------------------\n"
+    )
+    safe_timestamp = datetime.now().strftime("%m-%d-%Y_%H-%M")
+    log_filename = os.path.join("logs", f"audit_{safe_timestamp}.log")
+    with open(log_filename, "w") as f:
+        f.write(log_entry)
+    print(f"Audit log written to {log_filename}")
+
+def get_username():
+    """
+    Returns the username using environment variables.
+    """
+    return os.getenv("LOGNAME") or os.getenv("USER") or "unknown"
+
+def get_host_ip():
+    """Get the host IP address."""
+    try:
+        return socket.gethostbyname(socket.gethostname())
+    except Exception:
+        return "unknown"
+
 def main():
     parser = argparse.ArgumentParser(
         description="Submit an RPSL object to a chosen IRR server using the HTTP API."
@@ -286,7 +326,7 @@ def main():
 
     # Set default server and port based on the chosen instance.
     if args.instance == "irrd":
-        default_server, default_port = "127.0.0.1", 8043  # Raw TCP default, but override for HTTP API.
+        default_server, default_port = "127.0.0.1", 8043  # Raw TCP default, but we'll override for HTTP API.
     elif args.instance == "radb":
         default_server, default_port = "whois.radb.net", 43
     elif args.instance == "tc":
@@ -321,7 +361,7 @@ def main():
         if multiple_routes and object_type in ("route", "route6"):
             try:
                 generated_objects = generate_route_subobjects(base_rpsl_text, object_type)
-                # Add generated objects to JSON for record-keeping.
+                # Store generated objects in JSON for record-keeping.
                 json_dict["generated_objects"] = generated_objects
                 objects_to_submit = generated_objects
             except Exception as e:
@@ -363,12 +403,18 @@ def main():
     print(json.dumps(result, indent=4))
 
     # If submission was successful and the input was a TXT file,
-    # update the generated JSON file's "status" field to "submitted".
+    # update the generated JSON file's "status" field to "submitted" and write an audit log.
     if file_ext == ".txt" and result.get("summary", {}).get("successful", 0) > 0:
         json_dict["status"] = "submitted"
         with open(json_filename, "w") as f:
             json.dump(json_dict, f, indent=4)
         print(f"Updated JSON file '{json_filename}' with status 'submitted'.")
+        username = os.getenv("LOGNAME") or os.getenv("USER") or "unknown"
+        try:
+            host_ip = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            host_ip = "unknown"
+        write_audit_log(username, host_ip, action, json_filename)
 
 if __name__ == "__main__":
     main()
