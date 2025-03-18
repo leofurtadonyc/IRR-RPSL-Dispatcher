@@ -3,18 +3,26 @@ https://github.com/leofurtadonyc/IRR-RPSL-Dispatcher
 
 # IRR RPSL Dispacher Tool
 
-IRR RPSL Dispatcher is a Python-based tool designed to simplify and automate the management of RPSL (Routing Policy Specification Language) object submissions to Internet Routing Registry (IRR) instances by leveraging their APIs. It effectively bridges the gap between user-friendly input formats and the strict requirements of IRR databases, thereby reducing operational complexity and saving time for network engineers and operations teams.
+IRR RPSL Dispatcher is a Python-based tool designed to simplify and automate the management of RPSL (Routing Policy Specification Language)
+object submissions to Internet Routing Registry (IRR) instances by leveraging their APIs. It effectively bridges the gap between user-friendly
+input formats and the strict requirements of IRR databases, thereby reducing operational complexity and saving time for network engineers and operations teams.
 
-The tool processes RPSL objects using JSON input files or TXT files that contain specific header metadata. Users can specify actions such as adding, modifying, or deleting objects through these header lines, provide passwords either in the files or as command-line arguments, and enable one-time multiple route generation if desired.
+The tool processes RPSL objects using JSON input files or TXT files that contain specific header metadata. Users can specify actions such as
+adding, modifying, or deleting objects through these header lines, provide passwords either in the files or as command-line arguments, and enable
+one-time multiple route generation if desired.
 
-IRR RPSL Dispatcher supports various IRR instances, ranging from local private IRRd for laboratory testing to production instances like RADB, ALTDB, and TC IRR. It features configurable defaults to ensure compatibility across different operational environments.
+IRR RPSL Dispatcher supports various IRR instances, ranging from local private IRRd for laboratory testing to production instances like RADB, ALTDB,
+and TC IRR. It features configurable defaults to ensure compatibility across different operational environments.
 
-Additionally, the tool generates JSON files that document the processed RPSL objects. These files are stored in an objects/ directory, facilitating auditing and consistency management by ensuring that all submitted objects adhere to uniform formatting rules.
+Additionally, the tool generates JSON files that document the processed RPSL objects. These files are stored in an objects/ directory, facilitating
+auditing and consistency management by ensuring that all submitted objects adhere to uniform formatting rules.
 
-The tool can be enhanced in several ways to integrate more effectively with other tools. This would facilitate end-to-end network automation and play a vital role in managing routing policies, where security and availability are critical. Please feel free to share any ideas or suggestions you may have.
+The tool can be enhanced in several ways to integrate more effectively with other tools. This would facilitate end-to-end network automation and play
+a vital role in managing routing policies, where security and availability are critical. Please feel free to share any ideas or suggestions you may have.
 
 ## Note
-The script is ready to use without Docker Compose, unless you want to run your own IRRd instance alongside irr_rpsl_dispatcher.py. If you don't plan to run your own IRRd, you can skip the entire "Setup and Build" section.
+The script is ready to use without Docker Compose, unless you want to run your own IRRd instance alongside irr_rpsl_dispatcher.py.
+If you don't plan to run your own IRRd, you can skip the entire "Setup and Build" section.
 
 ## Features
 
@@ -31,7 +39,8 @@ multiple_routes: true|false (optional)
 The tool extracts these values to construct the JSON submission payload.
 
 ### NIC Handle Sanitization
-The tool automatically sanitizes the `admin-c:` and `tech-c:` fields. For example, "John O. Player" is converted to "JOHN-O-PLAYER," ensuring compliance with IRRd’s requirements.
+The tool automatically sanitizes the `admin-c:` and `tech-c:` fields. For example, "John O. Player" is converted to "JOHN-O-PLAYER," 
+ensuring compliance with IRRd’s requirements.
 
 ### Multiple Routes Generation
 For IPv4 route objects:
@@ -51,7 +60,8 @@ The tool supports different IRR instances:
 - `tc`: TC IRR (defaults to whois.tc.net:43)
 
 ### JSON Record Generation
-When processing TXT files, the tool creates a corresponding JSON file in an `objects/` folder (filename derived from object type and identifier). Once the API submission is successful, the status in this JSON file is updated to "submitted."
+When processing TXT files, the tool creates a corresponding JSON file in an `objects/` folder (filename derived from object type and identifier).
+Once the API submission is successful, the status in this JSON file is updated to "submitted."
 
 ## Requirements
 - Docker and Docker Compose
@@ -81,7 +91,8 @@ When processing TXT files, the tool creates a corresponding JSON file in an `obj
    ```
 
 ### Creating the Maintainer Object
-Since IRRd may not allow the creation of maintainer objects via the API, especially on your local IRRd instance, you will have to manually insert a maintainer into the database. For example, run the following command in another terminal window (and ensure to change the values as needed):
+Since IRRd may not allow the creation of maintainer objects via the API, especially on your local IRRd instance, you will have to manually
+insert a maintainer into the database. For example, run the following command in another terminal window (and ensure to change the values as needed):
 ```
 docker-compose exec postgres psql -U irrd -d irrd -c "INSERT INTO rpsl_objects (rpsl_pk, object_text, source, object_class, parsed_data) VALUES (
   'MAINT-AS64496',
@@ -163,13 +174,16 @@ The tool will perform the following steps:
 ## Troubleshooting and Error Handling
 
 ### 500 Internal Server Error
-If you encounter a "500 Internal Server Error" from the API, check the IRRd logs for further details. Occasionally, email notifications (via SMTP) may lead to transient failures. You can consider the operation successful if the objects are being created or deleted despite the error.
+If you encounter a "500 Internal Server Error" from the API, check the IRRd logs for further details. Occasionally, email notifications (via SMTP)
+may lead to transient failures. You can consider the operation successful if the objects are being created or deleted despite the error.
 
 ### Multiple Routes Generation
-For IPv4 objects, subdivisions are created up to /24. For IPv6 objects (route6), subdivisions are created up to /36. An error will be raised if an IPv6 prefix exceeds /36.
+For IPv4 objects, subdivisions are created up to /24. For IPv6 objects (route6), subdivisions are created up to /36. An error will be raised if 
+an IPv6 prefix exceeds /36.
 
 ### Maintainer and NIC Handle Issues
-If NIC handle fields (admin-c, tech-c) are not accepted, ensure they are properly sanitized. The tool converts names such as "Leonardo Furtado" into "LEONARDOFURTADO." If an object is created with an incorrect NIC handle, consider adjusting the header file or using the -o override option.
+If NIC handle fields (admin-c, tech-c) are not accepted, ensure they are properly sanitized. The tool converts names such as "Leonardo Furtado" into
+"LEONARDOFURTADO." If an object is created with an incorrect NIC handle, consider adjusting the header file or using the -o override option.
 
 ## Additional Information
 
