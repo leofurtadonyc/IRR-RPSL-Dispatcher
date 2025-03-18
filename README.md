@@ -1,5 +1,5 @@
 # IRR-RPSL-Dispatcher
-A dispatcher tool for IRR that sends RPSL objects via the HTTP API.
+A dispatcher tool for IRR that sends RPSL objects via the HTTP/HTTPS API.
 
 IRR-RPSL-Dispatcher is a Python-based tool designed to simplify and automate the management of RPSL (Routing Policy Specification Language) object submissions to Internet Routing Registry (IRR) instances. It effectively bridges the gap between user-friendly input formats and the strict requirements of IRR databases, thereby reducing operational complexity and saving time for network engineers and operations teams.
 
@@ -13,7 +13,6 @@ The tool can be enhanced in several ways to integrate more effectively with othe
 
 ```
 python3 irr_rpsl_dispatcher.py --help
- 2 err | chatnoc-venv 3.12.9 py | at 23:31:59 
 usage: irr_rpsl_dispatcher.py [-h] [-s SERVER] [-p PORT] [--db-type {RADB,ALTDB}] [--instance {irrd,altdb,radb,tc}] [--https] [-o OVERRIDE] file
 
 Submit an RPSL object to a chosen IRR server using the HTTP/HTTPS API.
