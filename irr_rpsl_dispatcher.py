@@ -12,10 +12,10 @@ Options:
     --db-type        Target IRR database type: RADB or ALTDB (default: ALTDB)
     --instance       Select the target IRR instance:
                        "irrd"   - your own IRRd instance (defaults to 127.0.0.1; HTTP API on port 8080)
-                       "altdb"  - ALTDB (defaults to whois.altdb.net:43)
-                       "radb"   - RADB (defaults to whois.radb.net:43)
+                       "altdb"  - ALTDB (defaults to whois.altdb.net:443)
+                       "radb"   - RADB (defaults to whois.radb.net:443)
                        "tc"     - TC IRR (defaults to bgp.net.br:443 using HTTPS)
-    --https          Use HTTPS instead of HTTP for the API connection (ignored for TC instance, which always uses HTTPS).
+    --http           Use HTTP instead of HTTPS for the API connection (for non-local IRRD instances)
     -o, --override   Override password if required
 """
 
@@ -140,6 +140,7 @@ def process_txt_file(txt_filename):
     object_type = attr.strip().lower()  # e.g., "aut-num", "as-set", "route", "route6"
     identifier = value.strip()           # Typically the key value for the object
 
+    # Build JSON dictionary.
     json_dict = {
         "object_type": object_type,
         "action": action.lower() if action else "",
@@ -223,7 +224,7 @@ def generate_route_subobjects(rpsl_text, object_type):
 
 def save_json_object(json_data, object_type, identifier):
     """
-    Saves the JSON data to a file inside the "objects/" folder.
+    Save the JSON data to a file inside the "objects/" folder.
     The filename is derived from the object type and identifier.
     """
     if not os.path.exists("objects"):
@@ -312,21 +313,22 @@ def main():
     parser.add_argument("-p", "--port", type=int, default=None, help="IRR server port (overrides the default for the selected instance)")
     parser.add_argument("--db-type", choices=["RADB", "ALTDB"], default="ALTDB", help="Target IRR database type (default: ALTDB)")
     parser.add_argument("--instance", choices=["irrd", "altdb", "radb", "tc"], default="altdb",
-                        help="Select the target IRR instance. 'irrd' defaults to 127.0.0.1 (HTTP API on port 8080), 'altdb' to whois.altdb.net:43, 'radb' to whois.radb.net:43, and 'tc' to bgp.net.br:443 (default: altdb)")
-    parser.add_argument("--https", action="store_true", help="Use HTTPS instead of HTTP for the API connection (ignored for TC, which always uses HTTPS)")
+                        help="Select the target IRR instance. 'irrd' defaults to 127.0.0.1 (HTTP API on port 8080), 'altdb' to whois.altdb.net:443, 'radb' to whois.radb.net:443, and 'tc' to bgp.net.br:443 (default: altdb)")
+    # New flag: --http. For non-local IRRd, if specified, force HTTP instead of HTTPS.
+    parser.add_argument("--http", action="store_true", help="Use HTTP instead of HTTPS for the API connection (for non-local IRRd instances)")
     parser.add_argument("-o", "--override", help="Override password, if required")
     args = parser.parse_args()
 
-    # Set default server and port based on the chosen instance.
+    # Set default server and port based on instance selection.
     if args.instance == "irrd":
         default_server, default_port = "127.0.0.1", 8043  # Raw TCP default; will override for HTTP API.
     elif args.instance == "radb":
-        default_server, default_port = "whois.radb.net", 43
+        default_server, default_port = "whois.radb.net", 443
     elif args.instance == "tc":
-        # For TC, defaults are now set to use HTTPS on port 443.
+        # For TC, defaults now: use bgp.net.br on port 443.
         default_server, default_port = "bgp.net.br", 443
     else:
-        default_server, default_port = "whois.altdb.net", 43
+        default_server, default_port = "whois.altdb.net", 443
 
     server = args.server if args.server is not None else default_server
     port = args.port if args.port is not None else default_port
@@ -335,17 +337,18 @@ def main():
     if args.instance == "irrd":
         port = 8080
 
-    # Determine the URL scheme.
-    # For TC instance, force HTTPS by default.
-    if args.instance == "tc":
-        scheme = "https"
+    # Determine URL scheme:
+    # For local IRRD, use HTTP.
+    # For all others, default to HTTPS unless --http flag is provided.
+    if args.instance == "irrd":
+        scheme = "http"
     else:
-        scheme = "https" if args.https else "http"
+        scheme = "http" if args.http else "https"
 
-    # Set the API URL based on the instance.
+    # Build API URL based on instance.
     if args.instance == "tc":
-        # For TC instance, use the /submit/ endpoint.
-        api_url = f"{scheme}://{server}:{port}/submit/"
+        # For TC instance, use /submit/ endpoint.
+        api_url = f"{scheme}://{server}:{port}/v1/submit/"
     else:
         api_url = f"{scheme}://{server}:{port}/v1/submit/"
 
@@ -365,7 +368,7 @@ def main():
         base_rpsl_text = json_dict["data"]["object_text"]
         action = json_dict.get("action", None)
         passwords = json_dict["data"].get("passwords", [])
-        # Retrieve the multiple_routes flag from the top level.
+        # Retrieve the multiple_routes flag from top level.
         multiple_routes = json_dict.get("multiple_routes", False)
         if multiple_routes and object_type in ("route", "route6"):
             try:
