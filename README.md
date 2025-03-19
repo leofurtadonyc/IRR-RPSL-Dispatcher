@@ -11,6 +11,9 @@ Additionally, the tool generates JSON files that document the processed RPSL obj
 
 The tool can be enhanced in several ways to integrate more effectively with other tools. This would facilitate end-to-end network automation and play a vital role in managing routing policies, where security and availability are critical. Please feel free to share any ideas or suggestions you may have.
 
+## Note
+This code has been tested with IRRD (local private for testing and development) and TC. It has not yet been tested with ALTDB or RADb. I will modify the code if needed once I have the opportunity to test with these systems’ APIs.
+
 ```
 python3 irr_rpsl_dispatcher.py --help
 usage: irr_rpsl_dispatcher.py [-h] [-s SERVER] [-p PORT] [--db-type {RADB,ALTDB}] [--instance {irrd,altdb,radb,tc}] [--http] [-o OVERRIDE] file
