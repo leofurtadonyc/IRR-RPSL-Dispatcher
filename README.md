@@ -13,7 +13,7 @@ The tool can be enhanced in several ways to integrate more effectively with othe
 
 ```
 python3 irr_rpsl_dispatcher.py --help
-usage: irr_rpsl_dispatcher.py [-h] [-s SERVER] [-p PORT] [--db-type {RADB,ALTDB}] [--instance {irrd,altdb,radb,tc}] [--https] [-o OVERRIDE] file
+usage: irr_rpsl_dispatcher.py [-h] [-s SERVER] [-p PORT] [--db-type {RADB,ALTDB}] [--instance {irrd,altdb,radb,tc}] [--http] [-o OVERRIDE] file
 
 Submit an RPSL object to a chosen IRR server using the HTTP/HTTPS API.
 
@@ -28,9 +28,9 @@ options:
   --db-type {RADB,ALTDB}
                         Target IRR database type (default: ALTDB)
   --instance {irrd,altdb,radb,tc}
-                        Select the target IRR instance. 'irrd' defaults to 127.0.0.1 (HTTP API on port 8080), 'altdb' to whois.altdb.net:43, 'radb' to whois.radb.net:43, and 'tc' to bgp.net.br:80 (default:
-                        altdb)
-  --https               Use HTTPS instead of HTTP for the API connection
+                        Select the target IRR instance. 'irrd' defaults to 127.0.0.1 (HTTP API on port 8080), 'altdb' to whois.altdb.net:443, 'radb' to whois.radb.net:443, and 'tc' to bgp.net.br:443
+                        (default: altdb)
+  --http                Use HTTP instead of HTTPS for the API connection (for non-local IRRd instances)
   -o OVERRIDE, --override OVERRIDE
                         Override password, if required
 ```
