@@ -55,9 +55,9 @@ For IPv6 route6 objects:
 ### Instance Support
 The tool supports different IRR instances:
 - `irrd`: your own local private IRRd instance (default HTTP API on port 8080)
-- `altdb`: ALTDB (defaults to whois.altdb.net:43)
-- `radb`: RADB (defaults to whois.radb.net:43)
-- `tc`: TC IRR (defaults to whois.tc.net:43)
+- `altdb`: ALTDB (defaults to whois.altdb.net:443)
+- `radb`: RADB (defaults to whois.radb.net:443)
+- `tc`: TC IRR (defaults to bgp.net.br:443)
 
 ### JSON Record Generation
 When processing TXT files, the tool creates a corresponding JSON file in an `objects/` folder (filename derived from object type and identifier).
@@ -168,7 +168,7 @@ The tool will perform the following steps:
 3. Sanitize NIC handle fields.
 4. Generate a JSON file in the `objects/` folder.
 5. If `multiple_routes: true` is set and the object is a route (or route6), it will generate additional objects as outlined.
-6. Submit the object(s) via the IRRd HTTP API.
+6. Submit the object(s) via the IRRd HTTPS API (unless --http is used as an argument).
 7. Update the JSON file's "status" to "submitted" if the submission is successful.
 
 ## Troubleshooting and Error Handling
