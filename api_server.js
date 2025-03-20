@@ -223,6 +223,77 @@ app.post('/v1/whois', (req, res) => {
   }
 });
 
+// API endpoint to handle RPSL object deletions
+app.delete('/v1/submit', (req, res) => {
+  try {
+    const { object_type, data, server, server_config } = req.body;
+    
+    if (!object_type || !data || !data.object_text) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Set action to delete for DELETE requests
+    const action = 'delete';
+    
+    // Default to irrd if no server specified
+    const targetServer = server || 'irrd';
+
+    // Create a temporary file with the RPSL object data
+    const tempDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir);
+    }
+
+    const timestamp = new Date().getTime();
+    const tempFile = path.join(tempDir, `rpsl_${timestamp}.txt`);
+    
+    // Format the content for the temporary file
+    let fileContent = `# MAKE SURE TO CHANGE THE DESIRED ACTION. OPTIONS ARE: add, modify, delete\naction: ${action}\n`;
+    
+    if (data.passwords && data.passwords.length > 0) {
+      fileContent += `password: ${data.passwords[0]}\n`;
+    }
+    
+    fileContent += `${data.object_text}`;
+    
+    fs.writeFileSync(tempFile, fileContent);
+    
+    // Execute the Python script with the temporary file and specified server
+    const cmd = `python3 ${path.join(__dirname, 'irr_rpsl_dispatcher.py')} --instance ${targetServer} ${tempFile}`;
+    
+    exec(cmd, (error, stdout, stderr) => {
+      // Clean up the temporary file
+      fs.unlinkSync(tempFile);
+      
+      if (error) {
+        console.error(`Error executing command: ${error.message}`);
+        return res.status(500).json({ error: error.message, stderr });
+      }
+      
+      if (stderr) {
+        console.error(`Command stderr: ${stderr}`);
+      }
+      
+      console.log(`Command output: ${stdout}`);
+      
+      // Parse the output to find the JSON filename
+      const jsonFileMatch = stdout.match(/Generated JSON file: (.+\.json)/i);
+      const jsonFilename = jsonFileMatch ? jsonFileMatch[1] : null;
+      
+      // Return success response
+      return res.status(200).json({
+        summary: { successful: 1, failed: 0 },
+        message: 'RPSL object deleted successfully',
+        details: stdout,
+        jsonFile: jsonFilename
+      });
+    });
+  } catch (error) {
+    console.error(`Server error: ${error.message}`);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 // API endpoint to get audit logs
 app.get('/api/v1/audit-logs', (req, res) => {
   try {
