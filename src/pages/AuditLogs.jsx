@@ -26,11 +26,13 @@ const AuditLogs = () => {
     // Fetch audit logs from the backend API
     const fetchAuditLogs = async () => {
       try {
+        console.log('Fetching audit logs...');
         const response = await fetch('/api/v1/audit-logs');
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
         const data = await response.json();
+        console.log('Received audit logs data:', data);
         
         if (data.logs && Array.isArray(data.logs)) {
           setLogs(data.logs);

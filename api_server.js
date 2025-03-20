@@ -295,7 +295,7 @@ app.delete('/v1/submit', (req, res) => {
 });
 
 // API endpoint to get audit logs
-app.get('/api/v1/audit-logs', (req, res) => {
+app.get('/v1/audit-logs', (req, res) => {
   try {
     const logsDir = path.join(__dirname, 'logs');
     

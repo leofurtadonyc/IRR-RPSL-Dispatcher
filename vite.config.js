@@ -26,6 +26,12 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/whois(\/?)$/, '/v1/whois')
       },
+      // Specific endpoint for audit logs
+      '/api/v1/audit-logs': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      },
       // Generic API proxy rule for any other endpoints
       '/api': {
         target: 'http://localhost:8081',
