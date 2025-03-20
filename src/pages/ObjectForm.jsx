@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -26,7 +26,67 @@ const ObjectForm = () => {
     password: '',
     objectText: '',
     multipleRoutes: false,
+    server: '',
   });
+  
+  // Server configurations
+  const [serverConfigs, setServerConfigs] = useState({
+    irrd: {
+      name: 'Local IRRd',
+      hostname: '127.0.0.1',
+      port: '8080',
+      useHttps: false,
+    },
+    altdb: {
+      name: 'ALTDB',
+      hostname: 'whois.altdb.net',
+      port: '443',
+      useHttps: true,
+    },
+    radb: {
+      name: 'RADB',
+      hostname: 'whois.radb.net',
+      port: '443',
+      useHttps: true,
+    },
+    tc: {
+      name: 'TC IRR',
+      hostname: 'bgp.net.br',
+      port: '443',
+      useHttps: true,
+    },
+  });
+  
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('irrSettings');
+    if (savedSettings) {
+      try {
+        const parsedSettings = JSON.parse(savedSettings);
+        if (parsedSettings.servers) {
+          setServerConfigs(parsedSettings.servers);
+        }
+        // Set default server from settings
+        setFormData(prev => ({
+          ...prev,
+          server: parsedSettings.defaultIrr || 'tc'
+        }));
+      } catch (error) {
+        console.error('Error parsing saved settings:', error);
+        // Set default server if settings can't be loaded
+        setFormData(prev => ({
+          ...prev,
+          server: 'tc'
+        }));
+      }
+    } else {
+      // No saved settings, use TC as default
+      setFormData(prev => ({
+        ...prev,
+        server: 'tc'
+      }));
+    }
+  }, []);
   const [errors, setErrors] = useState({});
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -73,6 +133,7 @@ const ObjectForm = () => {
     if (!formData.action) newErrors.action = 'Action is required';
     if (!formData.identifier) newErrors.identifier = 'Identifier is required';
     if (!formData.objectText) newErrors.objectText = 'RPSL object text is required';
+    if (!formData.server) newErrors.server = 'IRR server is required';
     
     // Only require password for add and modify actions
     if ((formData.action === 'add' || formData.action === 'modify') && !formData.password) {
@@ -110,13 +171,26 @@ const ObjectForm = () => {
       severity: 'info',
     });
     
+    // Get server configuration for the selected server
+    const serverConfig = serverConfigs[formData.server];
+    const protocol = serverConfig.useHttps ? 'https' : 'http';
+    const apiUrl = `${protocol}://${serverConfig.hostname}:${serverConfig.port}/v1/submit`;
+    
+    console.log(`Submitting to ${apiUrl}`);
+    
     // Submit to the backend API
     fetch('/api/v1/submit', {
+      // In a real implementation, we would use apiUrl directly
+      // For now, we'll pass the server info to the backend
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(submitData),
+      body: JSON.stringify({
+        ...submitData,
+        server: formData.server,
+        server_config: serverConfig
+      }),
     })
       .then(response => {
         if (!response.ok) {
@@ -178,7 +252,7 @@ const ObjectForm = () => {
       <Paper sx={{ p: 3 }}>
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <FormControl fullWidth error={!!errors.objectType}>
                 <InputLabel>Object Type</InputLabel>
                 <Select
@@ -197,7 +271,7 @@ const ObjectForm = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <FormControl fullWidth error={!!errors.action}>
                 <InputLabel>Action</InputLabel>
                 <Select
@@ -213,6 +287,24 @@ const ObjectForm = () => {
                   ))}
                 </Select>
                 {errors.action && <FormHelperText>{errors.action}</FormHelperText>}
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={!!errors.server}>
+                <InputLabel>IRR Server</InputLabel>
+                <Select
+                  name="server"
+                  value={formData.server}
+                  onChange={handleChange}
+                  label="IRR Server"
+                >
+                  <MenuItem value="irrd">{serverConfigs.irrd.name} ({serverConfigs.irrd.hostname})</MenuItem>
+                  <MenuItem value="altdb">{serverConfigs.altdb.name} ({serverConfigs.altdb.hostname})</MenuItem>
+                  <MenuItem value="radb">{serverConfigs.radb.name} ({serverConfigs.radb.hostname})</MenuItem>
+                  <MenuItem value="tc">{serverConfigs.tc.name} ({serverConfigs.tc.hostname})</MenuItem>
+                </Select>
+                {errors.server && <FormHelperText>{errors.server}</FormHelperText>}
               </FormControl>
             </Grid>
             

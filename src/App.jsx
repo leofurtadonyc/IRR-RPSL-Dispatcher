@@ -13,6 +13,7 @@ import ObjectList from './pages/ObjectList';
 import ObjectView from './pages/ObjectView';
 import AuditLogs from './pages/AuditLogs';
 import Whois from './pages/Whois';
+import Settings from './pages/Settings';
 
 // Create a theme
 const theme = createTheme({
@@ -48,6 +49,7 @@ function App() {
           <Route path="/objects" element={<ObjectList />} />
           <Route path="/objects/new" element={<ObjectForm />} />
           <Route path="/objects/:id" element={<ObjectView />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/audit-logs" element={<AuditLogs />} />
           <Route path="/whois" element={<Whois />} />
         </Routes>

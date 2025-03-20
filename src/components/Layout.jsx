@@ -21,6 +21,7 @@ import {
   Add as AddIcon,
   History as HistoryIcon,
   Search as SearchIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
@@ -58,6 +59,7 @@ const Layout = ({ children }) => {
     { text: 'Create Object', icon: <AddIcon />, path: '/objects/new' },
     { text: 'Audit Logs', icon: <HistoryIcon />, path: '/audit-logs' },
     { text: 'Whois Query', icon: <SearchIcon />, path: '/whois' },
+    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
 
   return (

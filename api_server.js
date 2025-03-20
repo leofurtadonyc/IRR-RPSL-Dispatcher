@@ -23,11 +23,14 @@ app.use((req, res, next) => {
 // API endpoint to handle RPSL object submissions
 app.post('/v1/submit', (req, res) => {
   try {
-    const { object_type, action, data, multiple_routes } = req.body;
+    const { object_type, action, data, multiple_routes, server, server_config } = req.body;
     
     if (!object_type || !action || !data || !data.object_text) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+    
+    // Default to irrd if no server specified
+    const targetServer = server || 'irrd';
 
     // Create a temporary file with the RPSL object data
     const tempDir = path.join(__dirname, 'uploads');
@@ -53,8 +56,8 @@ app.post('/v1/submit', (req, res) => {
     
     fs.writeFileSync(tempFile, fileContent);
     
-    // Execute the Python script with the temporary file
-    const cmd = `python3 ${path.join(__dirname, 'irr_rpsl_dispatcher.py')} --instance irrd ${tempFile}`;
+    // Execute the Python script with the temporary file and specified server
+    const cmd = `python3 ${path.join(__dirname, 'irr_rpsl_dispatcher.py')} --instance ${targetServer} ${tempFile}`;
     
     exec(cmd, (error, stdout, stderr) => {
       // Clean up the temporary file
