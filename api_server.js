@@ -65,11 +65,25 @@ app.post('/v1/submit', (req, res) => {
       
       if (error) {
         console.error(`Error executing command: ${error.message}`);
+        // Check for specific error types
+        if (stderr && stderr.includes('not authoritative')) {
+          return res.status(403).json({ error: 'Source is not authoritative for this object', details: stderr });
+        } else if (stderr && stderr.includes('authentication failed')) {
+          return res.status(401).json({ error: 'Authentication failed', details: stderr });
+        } else if (stderr && stderr.includes('Authorisation') && stderr.includes('must be authenticated')) {
+          return res.status(401).json({ error: 'Authorization failed', details: stderr });
+        } else if (stderr && stderr.includes('no such object')) {
+          return res.status(404).json({ error: 'Object not found', details: stderr });
+        }
         return res.status(500).json({ error: error.message, stderr });
       }
       
       if (stderr) {
         console.error(`Command stderr: ${stderr}`);
+        // Check if stderr contains authorization errors even if the command didn't exit with an error code
+        if (stderr.includes('Authorisation') && stderr.includes('failed')) {
+          return res.status(401).json({ error: 'Authorization failed', details: stderr });
+        }
       }
       
       console.log(`Command output: ${stdout}`);
@@ -77,6 +91,45 @@ app.post('/v1/submit', (req, res) => {
       // Parse the output to find the JSON filename
       const jsonFileMatch = stdout.match(/Generated JSON file: (.+\.json)/i);
       const jsonFilename = jsonFileMatch ? jsonFileMatch[1] : null;
+      
+      // Parse the JSON response from the server to check if the submission was actually successful
+      const responseMatch = stdout.match(/Response from server:\s*({[\s\S]*})/);
+      if (responseMatch) {
+        try {
+          const responseJson = JSON.parse(responseMatch[1]);
+          const summary = responseJson.summary || {};
+          
+          // Check if there were any successful operations
+          if (summary.successful === 0 || summary.failed > 0) {
+            // Find error messages in the objects array
+            let errorMessage = 'RPSL object submission failed';
+            if (responseJson.objects && responseJson.objects.length > 0) {
+              const failedObject = responseJson.objects.find(obj => !obj.successful);
+              if (failedObject && failedObject.error_messages && failedObject.error_messages.length > 0) {
+                errorMessage = failedObject.error_messages[0];
+              }
+            }
+            
+            // Return error response with appropriate status code
+            if (errorMessage.includes('Authorisation') && errorMessage.includes('failed')) {
+              return res.status(401).json({ 
+                error: 'Authorization failed', 
+                details: errorMessage,
+                jsonFile: jsonFilename
+              });
+            } else {
+              return res.status(400).json({ 
+                error: errorMessage, 
+                details: stdout,
+                jsonFile: jsonFilename
+              });
+            }
+          }
+        } catch (parseError) {
+          console.error(`Error parsing server response: ${parseError.message}`);
+          // Continue with default success response if parsing fails
+        }
+      }
       
       // Return success response
       return res.status(200).json({
@@ -267,11 +320,25 @@ app.delete('/v1/submit', (req, res) => {
       
       if (error) {
         console.error(`Error executing command: ${error.message}`);
+        // Check for specific error types
+        if (stderr && stderr.includes('not authoritative')) {
+          return res.status(403).json({ error: 'Source is not authoritative for this object', details: stderr });
+        } else if (stderr && stderr.includes('authentication failed')) {
+          return res.status(401).json({ error: 'Authentication failed', details: stderr });
+        } else if (stderr && stderr.includes('Authorisation') && stderr.includes('failed')) {
+          return res.status(401).json({ error: 'Authorization failed', details: stderr });
+        } else if (stderr && stderr.includes('no such object')) {
+          return res.status(404).json({ error: 'Object not found', details: stderr });
+        }
         return res.status(500).json({ error: error.message, stderr });
       }
       
       if (stderr) {
         console.error(`Command stderr: ${stderr}`);
+        // Check if stderr contains authorization errors even if the command didn't exit with an error code
+        if (stderr.includes('Authorisation') && stderr.includes('failed')) {
+          return res.status(401).json({ error: 'Authorization failed', details: stderr });
+        }
       }
       
       console.log(`Command output: ${stdout}`);
@@ -279,6 +346,45 @@ app.delete('/v1/submit', (req, res) => {
       // Parse the output to find the JSON filename
       const jsonFileMatch = stdout.match(/Generated JSON file: (.+\.json)/i);
       const jsonFilename = jsonFileMatch ? jsonFileMatch[1] : null;
+      
+      // Parse the JSON response from the server to check if the submission was actually successful
+      const responseMatch = stdout.match(/Response from server:\s*({[\s\S]*})/);
+      if (responseMatch) {
+        try {
+          const responseJson = JSON.parse(responseMatch[1]);
+          const summary = responseJson.summary || {};
+          
+          // Check if there were any successful operations
+          if (summary.successful === 0 || summary.failed > 0) {
+            // Find error messages in the objects array
+            let errorMessage = 'RPSL object deletion failed';
+            if (responseJson.objects && responseJson.objects.length > 0) {
+              const failedObject = responseJson.objects.find(obj => !obj.successful);
+              if (failedObject && failedObject.error_messages && failedObject.error_messages.length > 0) {
+                errorMessage = failedObject.error_messages[0];
+              }
+            }
+            
+            // Return error response with appropriate status code
+            if (errorMessage.includes('Authorisation') && errorMessage.includes('failed')) {
+              return res.status(401).json({ 
+                error: 'Authorization failed', 
+                details: errorMessage,
+                jsonFile: jsonFilename
+              });
+            } else {
+              return res.status(400).json({ 
+                error: errorMessage, 
+                details: stdout,
+                jsonFile: jsonFilename
+              });
+            }
+          }
+        } catch (parseError) {
+          console.error(`Error parsing server response: ${parseError.message}`);
+          // Continue with default success response if parsing fails
+        }
+      }
       
       // Return success response
       return res.status(200).json({
