@@ -23,21 +23,32 @@ const AuditLogs = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   useEffect(() => {
-    // In a real implementation, this would fetch data from the backend API
-    // For now, we'll use mock data
-    const mockLogs = [
-      { id: 1, timestamp: '2023-06-15 14:30', username: 'admin', hostIp: '192.168.1.100', operation: 'add', objectType: 'route', identifier: '192.0.2.0/24' },
-      { id: 2, timestamp: '2023-06-15 13:45', username: 'admin', hostIp: '192.168.1.100', operation: 'modify', objectType: 'as-set', identifier: 'AS-EXAMPLE' },
-      { id: 3, timestamp: '2023-06-15 11:20', username: 'operator', hostIp: '192.168.1.101', operation: 'add', objectType: 'aut-num', identifier: 'AS12345' },
-      { id: 4, timestamp: '2023-06-14 16:15', username: 'admin', hostIp: '192.168.1.100', operation: 'add', objectType: 'route6', identifier: '2001:db8::/32' },
-      { id: 5, timestamp: '2023-06-14 10:30', username: 'operator', hostIp: '192.168.1.101', operation: 'modify', objectType: 'mntner', identifier: 'MAINT-AS12345' },
-      { id: 6, timestamp: '2023-06-13 09:45', username: 'admin', hostIp: '192.168.1.100', operation: 'delete', objectType: 'route', identifier: '198.51.100.0/24' },
-      { id: 7, timestamp: '2023-06-12 14:20', username: 'operator', hostIp: '192.168.1.101', operation: 'add', objectType: 'as-set', identifier: 'AS-CUSTOMERS' },
-      { id: 8, timestamp: '2023-06-11 11:10', username: 'admin', hostIp: '192.168.1.100', operation: 'add', objectType: 'person', identifier: 'ADMIN-EXAMPLE' },
-    ];
+    // Fetch audit logs from the backend API
+    const fetchAuditLogs = async () => {
+      try {
+        const response = await fetch('/api/v1/audit-logs');
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        if (data.logs && Array.isArray(data.logs)) {
+          setLogs(data.logs);
+          setFilteredLogs(data.logs);
+        } else {
+          // If no logs are found or the response format is unexpected
+          setLogs([]);
+          setFilteredLogs([]);
+        }
+      } catch (error) {
+        console.error('Error fetching audit logs:', error);
+        // Set empty arrays if there's an error
+        setLogs([]);
+        setFilteredLogs([]);
+      }
+    };
     
-    setLogs(mockLogs);
-    setFilteredLogs(mockLogs);
+    fetchAuditLogs();
   }, []);
 
   useEffect(() => {

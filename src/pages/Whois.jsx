@@ -31,7 +31,7 @@ const Whois = () => {
 
   // Server options based on irr_rpsl_dispatcher.py
   const serverOptions = [
-    { value: 'irrd', label: 'Local IRRd (127.0.0.1)', host: '127.0.0.1', port: '8043' },
+    { value: 'irrd', label: 'Local IRRd (localhost)', host: 'localhost', port: '8043' },
     { value: 'altdb', label: 'ALTDB (whois.altdb.net)', host: 'whois.altdb.net', port: '' },
     { value: 'radb', label: 'RADB (whois.radb.net)', host: 'whois.radb.net', port: '' },
     { value: 'tc', label: 'TC IRR (bgp.net.br)', host: 'bgp.net.br', port: '' },
@@ -62,7 +62,7 @@ const Whois = () => {
     
     try {
       // Execute whois query via backend
-      const response = await fetch('/v1/whois', {
+      const response = await fetch('/api/v1/whois', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

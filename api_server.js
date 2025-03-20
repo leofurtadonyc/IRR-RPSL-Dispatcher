@@ -179,7 +179,7 @@ app.post('/v1/whois', (req, res) => {
     let hostname, port;
     switch(server) {
       case 'irrd':
-        hostname = '127.0.0.1';
+        hostname = 'localhost';
         port = '8043';
         break;
       case 'altdb':
@@ -217,6 +217,83 @@ app.post('/v1/whois', (req, res) => {
         server: hostname
       });
     });
+  } catch (error) {
+    console.error(`Server error: ${error.message}`);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// API endpoint to get audit logs
+app.get('/api/v1/audit-logs', (req, res) => {
+  try {
+    const logsDir = path.join(__dirname, 'logs');
+    
+    if (!fs.existsSync(logsDir)) {
+      return res.json({ logs: [] });
+    }
+    
+    const files = fs.readdirSync(logsDir);
+    const logs = [];
+    let logId = 1;
+    
+    files.forEach(file => {
+      if (file.startsWith('audit_') && file.endsWith('.log')) {
+        try {
+          const filePath = path.join(logsDir, file);
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+          
+          // Parse log file content
+          const logEntries = fileContent.split('----------------------------------------');
+          
+          logEntries.forEach(entry => {
+            if (entry.trim()) {
+              const lines = entry.trim().split('\n');
+              const logData = {};
+              
+              lines.forEach(line => {
+                if (line.includes(': ')) {
+                  const [key, value] = line.split(': ');
+                  logData[key.toLowerCase()] = value;
+                }
+              });
+              
+              if (logData.timestamp) {
+                // Extract object type and identifier from JSON file name if available
+                let objectType = '';
+                let identifier = '';
+                
+                if (logData['json file']) {
+                  const jsonFileName = path.basename(logData['json file']);
+                  const parts = jsonFileName.split('_');
+                  if (parts.length > 0) {
+                    objectType = parts[0];
+                    // Try to extract identifier from remaining parts
+                    if (parts.length > 1) {
+                      identifier = parts.slice(1).join('_').replace('.json', '');
+                    }
+                  }
+                }
+                
+                logs.push({
+                  id: logId++,
+                  timestamp: logData.timestamp,
+                  username: logData.username || '',
+                  hostIp: logData['host ip'] || '',
+                  operation: logData.operation || '',
+                  objectType: objectType,
+                  identifier: identifier,
+                  jsonFile: logData['json file'] || ''
+                });
+              }
+            }
+          });
+        } catch (err) {
+          console.error(`Error reading log file ${file}: ${err.message}`);
+        }
+      }
+    });
+    
+    return res.json({ logs });
   } catch (error) {
     console.error(`Server error: ${error.message}`);
     return res.status(500).json({ error: error.message });

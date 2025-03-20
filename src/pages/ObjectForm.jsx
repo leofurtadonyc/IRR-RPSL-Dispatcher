@@ -135,9 +135,9 @@ const ObjectForm = () => {
     if (!formData.objectText) newErrors.objectText = 'RPSL object text is required';
     if (!formData.server) newErrors.server = 'IRR server is required';
     
-    // Only require password for add and modify actions
-    if ((formData.action === 'add' || formData.action === 'modify') && !formData.password) {
-      newErrors.password = 'Password is required for add and modify actions';
+    // Require password for all actions (add, modify, and delete)
+    if (!formData.password) {
+      newErrors.password = 'Password is required for authentication';
     }
 
     setErrors(newErrors);
@@ -182,7 +182,8 @@ const ObjectForm = () => {
     fetch('/api/v1/submit', {
       // In a real implementation, we would use apiUrl directly
       // For now, we'll pass the server info to the backend
-      method: 'POST',
+      // Use DELETE method for delete actions, POST for add and modify
+      method: formData.action === 'delete' ? 'DELETE' : 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -329,8 +330,8 @@ const ObjectForm = () => {
                 value={formData.password}
                 onChange={handleChange}
                 error={!!errors.password}
-                helperText={errors.password || 'Required for add and modify actions'}
-                disabled={formData.action === 'delete'}
+                helperText={errors.password || 'Required for authentication'}
+                // Password is required for all actions including delete
               />
             </Grid>
             
